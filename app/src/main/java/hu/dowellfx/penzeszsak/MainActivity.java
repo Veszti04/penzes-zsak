@@ -295,9 +295,10 @@ public class MainActivity extends Activity {
             JSONObject o = a.optJSONObject(i);
             if (o == null) continue;
             final String m = o.optString("m");
+            final String ck = o.optString("c", "");
             TextView t = Ui.text(this, f.format(new Date(o.optLong("t") * 1000)) + "   " + Caller.firstLines(m, 4), 14, Ui.TEXT, false);
             t.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 8));
-            t.setOnClickListener(v -> startActivity(Caller.callIntent(this, m, "", true)));
+            t.setOnClickListener(v -> startActivity(Caller.callIntent(this, m, ck, true)));
             hist.addView(t, Ui.lp(this, 2));
         }
     }

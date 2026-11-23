@@ -48,7 +48,9 @@ public class CallActivity extends Activity {
     private void load(Intent i) {
         msg = i.getStringExtra("msg") == null ? "" : i.getStringExtra("msg");
         click = i.getStringExtra("click") == null ? "" : i.getStringExtra("click");
-        if (i.getBooleanExtra("answered", false) || !Caller.ringing) {
+        if (i.getBooleanExtra("answered", false)) {
+            answer();
+        } else if (!Caller.ringing) {
             Caller.stop(this);
             showDetails();
         } else {
@@ -141,7 +143,7 @@ public class CallActivity extends Activity {
 
         LinearLayout acts = new LinearLayout(this);
         acts.addView(action("✕", "Elutasít", Ui.RED, v -> { Caller.stop(this); finishAndRemoveTask(); }), new LinearLayout.LayoutParams(0, -2, 1f));
-        View ans = action("📞", "Felveszem", Ui.GREEN, v -> { Caller.stop(this); showDetails(); });
+        View ans = action("📞", "Felveszem", Ui.GREEN, v -> answer());
         acts.addView(ans, new LinearLayout.LayoutParams(0, -2, 1f));
         root.addView(acts, Ui.lp(this, 0));
         ObjectAnimator bob = ObjectAnimator.ofFloat(ans, "translationY", 0f, -Ui.dp(this, 7));
@@ -229,9 +231,24 @@ public class CallActivity extends Activity {
         setContentView(sv);
     }
 
-    private void openWeb() {
+    /** Felveszem: csend, majd egyenesen a weboldal – az adott jelzésnél. Lezárt telefonnál előbb feloldást kér. */
+    private void answer() {
+        Caller.stop(this);
+        if (click.isEmpty()) { showDetails(); return; }    // próbahívásnál nincs weboldal-cím
+        showDetails();                                      // háttérben ez marad, ha a feloldást megszakítod
+        openWeb(true);
+    }
+
+    private void openWeb() { openWeb(false); }
+
+    private void openWeb(boolean closeAfter) {
         Runnable go = () -> {
-            try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(click)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) { }
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(click)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                if (closeAfter) finishAndRemoveTask();
+            } catch (Exception e) {
+                android.widget.Toast.makeText(this, "Nem nyílt meg a weboldal", android.widget.Toast.LENGTH_SHORT).show();
+            }
         };
         KeyguardManager km = getSystemService(KeyguardManager.class);
         if (km != null && km.isKeyguardLocked()) {

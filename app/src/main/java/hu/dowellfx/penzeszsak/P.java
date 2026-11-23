@@ -47,11 +47,13 @@ final class P {
         sp(c).edit().putString("server", server.trim()).putString("topic", topic.trim()).putString("lastId", "").apply();
     }
 
-    static void addHistory(Context c, long time, String msg) {
+    static void addHistory(Context c, long time, String msg) { addHistory(c, time, msg, ""); }
+
+    static void addHistory(Context c, long time, String msg, String click) {
         try {
             JSONArray a = new JSONArray(sp(c).getString("hist", "[]"));
             JSONArray b = new JSONArray();
-            b.put(new JSONObject().put("t", time).put("m", msg));
+            b.put(new JSONObject().put("t", time).put("m", msg).put("c", click));
             for (int i = 0; i < a.length() && i < 29; i++) b.put(a.get(i));
             sp(c).edit().putString("hist", b.toString()).apply();
         } catch (Exception ignored) { }

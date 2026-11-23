@@ -189,7 +189,7 @@ public class ListenService extends Service {
             long t = j.optLong("time", System.currentTimeMillis() / 1000);
             String msg = j.optString("message", "");
             String click = j.optString("click", "");
-            P.addHistory(this, t, msg);
+            P.addHistory(this, t, msg, click);
             PowerManager pm = getSystemService(PowerManager.class);
             PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "pz:ring");
             wl.acquire(10000);
