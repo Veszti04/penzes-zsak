@@ -30,6 +30,7 @@ public class ListenService extends Service {
     static final String CH_SVC = "pz_service";
     static final String CH_CALL = "pz_call";
     static final String CH_MSG = "pz_msg";
+    static final String CH_INFO = "pz_info";
     static final int NID_SVC = 1;
 
     static volatile String status = "Indul…";
@@ -60,7 +61,7 @@ public class ListenService extends Service {
     static void channels(Context c) {
         NotificationManager nm = c.getSystemService(NotificationManager.class);
         NotificationChannel svc = new NotificationChannel(CH_SVC, "Háttérfigyelés", NotificationManager.IMPORTANCE_MIN);
-        svc.setDescription("Csendes, állandó értesítés: a Pénzes Zsák figyel");
+        svc.setDescription("Csendes, állandó értesítés: a DowellFX figyel");
         svc.setShowBadge(false);
         nm.createNotificationChannel(svc);
 
@@ -75,6 +76,11 @@ public class ListenService extends Service {
         NotificationChannel msg = new NotificationChannel(CH_MSG, "Nem fogadott hívások", NotificationManager.IMPORTANCE_DEFAULT);
         msg.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         nm.createNotificationChannel(msg);
+
+        NotificationChannel info = new NotificationChannel(CH_INFO, "Zárások és összesítők (csendes)", NotificationManager.IMPORTANCE_LOW);
+        info.setDescription("Nyertes/vesztes zárás, stop-módosítás, összesítők – hang nélkül");
+        info.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        nm.createNotificationChannel(info);
     }
 
     @Override
@@ -117,7 +123,7 @@ public class ListenService extends Service {
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         return new Notification.Builder(this, CH_SVC)
                 .setSmallIcon(R.drawable.ic_stat)
-                .setContentTitle("Pénzes Zsák figyel")
+                .setContentTitle("DowellFX figyel")
                 .setContentText(text)
                 .setOngoing(true)
                 .setShowWhen(false)
@@ -152,7 +158,7 @@ public class ListenService extends Service {
                 conn = c;
                 c.setConnectTimeout(15000);
                 c.setReadTimeout(130000);   // az ntfy ~45 mp-enként keepalive-ot küld
-                c.setRequestProperty("User-Agent", "PenzesZsak/1.0 (Android)");
+                c.setRequestProperty("User-Agent", "DowellFX/2.0 (Android)");
                 int code = c.getResponseCode();
                 if (code != 200) throw new IOException("HTTP " + code);
                 setStatus("Kapcsolódva ✓ – várja a jelzést", true);
@@ -187,6 +193,11 @@ public class ListenService extends Service {
             PowerManager pm = getSystemService(PowerManager.class);
             PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "pz:ring");
             wl.acquire(10000);
+            int prio = j.optInt("priority", 3);
+            if (prio < 4) {                       // zárás, összesítő: csendben
+                Caller.quiet(this, msg, click);
+                return;
+            }
             boolean fresh = System.currentTimeMillis() / 1000 - t < 15 * 60;   // régi (pótolt) üzenetre nem csörgünk
             if (fresh) Caller.ring(this, msg, click);
             else Caller.missed(this, msg, click);

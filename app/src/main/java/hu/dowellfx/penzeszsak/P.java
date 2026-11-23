@@ -28,6 +28,21 @@ final class P {
     /** A telefon saját csengőhangja az app hangja helyett. */
     static boolean systemTone(Context c) { return sp(c).getBoolean("systemTone", false); }
 
+    /** A hívó neve a hívásképernyőn (alapból DowellFX). */
+    static String callerName(Context c) {
+        String s = sp(c).getString("callerName", "").trim();
+        return s.isEmpty() ? "DowellFX" : s;
+    }
+    static void setCallerName(Context c, String s) { sp(c).edit().putString("callerName", s.trim()).apply(); }
+
+    /** A hívó képe (a felhasználó választja a galériából); null, ha nincs. */
+    static java.io.File callerPhotoFile(Context c) { return new java.io.File(c.getFilesDir(), "caller.png"); }
+    static android.graphics.Bitmap callerPhoto(Context c) {
+        java.io.File f = callerPhotoFile(c);
+        if (!f.exists()) return null;
+        try { return android.graphics.BitmapFactory.decodeFile(f.getAbsolutePath()); } catch (Exception e) { return null; }
+    }
+
     static void save(Context c, String server, String topic) {
         sp(c).edit().putString("server", server.trim()).putString("topic", topic.trim()).putString("lastId", "").apply();
     }

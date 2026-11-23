@@ -5,7 +5,7 @@ import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.KeyguardManager;
 import android.content.Intent;
-import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -19,7 +19,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-/** Teljes képernyős bejövő hívás: „Pénzes Zsák hív…”, Felveszem / Elutasít. Lezárt képernyő fölött is megjelenik. */
+/** Teljes képernyős bejövő hívás (DowellFX): hívó képe + neve, a jelzés lényege, Felveszem / Elutasít. Lezárt képernyő fölött is. */
 public class CallActivity extends Activity {
     private String msg = "", click = "";
 
@@ -33,7 +33,7 @@ public class CallActivity extends Activity {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
         }
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        getWindow().setStatusBarColor(Ui.BG);
+        getWindow().setStatusBarColor(0xFF132219);
         getWindow().setNavigationBarColor(Ui.BG);
         load(getIntent());
     }
@@ -56,56 +56,90 @@ public class CallActivity extends Activity {
         }
     }
 
+    private GradientDrawable bg() {
+        GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{0xFF132219, 0xFF0A120E, 0xFF050806});
+        return g;
+    }
+
     private void showRinging() {
+        String[] s = Caller.parse(msg);   // kind, dir, sym, entry, sl, now
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.setBackgroundColor(Ui.BG);
+        root.setBackground(bg());
         int p = Ui.dp(this, 24);
-        root.setPadding(p, Ui.dp(this, 56), p, Ui.dp(this, 48));
+        root.setPadding(p, Ui.dp(this, 44), p, Ui.dp(this, 44));
 
-        TextView lbl = Ui.text(this, "Bejövő hívás · DowellFX", 15, 0xFFD9C58F, false);
-        root.addView(lbl);
+        // márka-sor
+        LinearLayout brand = new LinearLayout(this);
+        brand.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView lg = new ImageView(this);
+        lg.setImageResource(R.drawable.logo);
+        brand.addView(lg, new LinearLayout.LayoutParams(Ui.dp(this, 22), Ui.dp(this, 22)));
+        TextView bt = Ui.text(this, "  DowellFX · bejövő hívás", 14, 0xFFD9C58F, false);
+        brand.addView(bt);
+        root.addView(brand);
 
+        // hívó képe pulzáló gyűrűkkel
+        boolean photo = Ui.photoAvatar(this);
         FrameLayout av = new FrameLayout(this);
-        LinearLayout.LayoutParams avp = new LinearLayout.LayoutParams(Ui.dp(this, 170), Ui.dp(this, 170));
-        avp.topMargin = Ui.dp(this, 40);
+        LinearLayout.LayoutParams avp = new LinearLayout.LayoutParams(Ui.dp(this, 200), Ui.dp(this, 200));
+        avp.topMargin = Ui.dp(this, 30);
         av.setLayoutParams(avp);
         for (int k = 0; k < 3; k++) {
             View ring = new View(this);
-            android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
-            g.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            GradientDrawable g = new GradientDrawable();
+            if (photo) g.setShape(GradientDrawable.OVAL); else g.setCornerRadius(Ui.dp(this, 52));
             g.setStroke(Ui.dp(this, 2), 0x88F2C14E);
             ring.setBackground(g);
-            av.addView(ring, new FrameLayout.LayoutParams(-1, -1));
+            FrameLayout.LayoutParams rp = new FrameLayout.LayoutParams(Ui.dp(this, 160), Ui.dp(this, 160), Gravity.CENTER);
+            av.addView(ring, rp);
             pulse(ring, k * 700L);
         }
-        ImageView coin = new ImageView(this);
-        coin.setImageResource(R.drawable.coin);
-        FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(Ui.dp(this, 150), Ui.dp(this, 150), Gravity.CENTER);
-        av.addView(coin, cp);
+        ImageView face = Ui.avatar(this, 160);
+        face.setElevation(Ui.dp(this, 10));
+        av.addView(face, new FrameLayout.LayoutParams(Ui.dp(this, 160), Ui.dp(this, 160), Gravity.CENTER));
         root.addView(av);
 
-        TextView name = Ui.text(this, "Pénzes Zsák", 34, Ui.TEXT, true);
+        TextView name = Ui.text(this, P.callerName(this), 36, Ui.TEXT, true);
         name.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams np = Ui.lp(this, 24);
-        root.addView(name, np);
+        root.addView(name, Ui.lp(this, 10));
         TextView sub = Ui.text(this, "hív…", 17, Ui.MUTED, false);
         sub.setGravity(Gravity.CENTER);
-        root.addView(sub, Ui.lp(this, 4));
+        root.addView(sub, Ui.lp(this, 2));
 
-        TextView prev = Ui.text(this, Caller.firstLines(msg, 6), 14, 0xFFCFDCD2, false);
-        prev.setGravity(Gravity.CENTER);
-        prev.setBackground(Ui.round(0x14FFFFFF, 0x22FFFFFF, 14, this));
-        int q = Ui.dp(this, 12);
-        prev.setPadding(q, q, q, q);
-        root.addView(prev, Ui.lp(this, 24));
+        // jelzés lényege
+        LinearLayout chips = new LinearLayout(this);
+        chips.setGravity(Gravity.CENTER);
+        String dir = s[1];
+        if ("timestop".equals(s[0])) chips.addView(Ui.pill(this, "⏱ IDŐSTOP – ZÁRD!", Ui.ORANGE));
+        else if (!dir.isEmpty()) chips.addView(Ui.pill(this, dir.equals("BUY") ? "▲ BUY" : "▼ SELL", dir.equals("BUY") ? Ui.GREEN : Ui.RED));
+        else if ("test".equals(s[0])) chips.addView(Ui.pill(this, "PRÓBAHÍVÁS", Ui.GOLD));
+        if (!s[2].isEmpty()) {
+            TextView sym = Ui.pill(this, s[2], Ui.GOLD);
+            LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(-2, -2);
+            sp.leftMargin = Ui.dp(this, 8);
+            chips.addView(sym, sp);
+        }
+        root.addView(chips, Ui.lp(this, 22));
 
-        View spacer = new View(this);
-        root.addView(spacer, new LinearLayout.LayoutParams(1, 0, 1f));
+        if (!s[3].isEmpty() || !s[4].isEmpty()) {
+            LinearLayout tiles = new LinearLayout(this);
+            tiles.addView(tile("Belépő", s[3]), new LinearLayout.LayoutParams(0, -2, 1f));
+            View gap = new View(this);
+            tiles.addView(gap, new LinearLayout.LayoutParams(Ui.dp(this, 10), 1));
+            tiles.addView(tile("timestop".equals(s[0]) ? "Most" : "Stop loss", "timestop".equals(s[0]) ? s[5] : s[4]), new LinearLayout.LayoutParams(0, -2, 1f));
+            root.addView(tiles, Ui.lp(this, 14));
+        } else {
+            TextView prev = Ui.text(this, Caller.firstLines(msg, 5), 14, 0xFFCFDCD2, false);
+            prev.setGravity(Gravity.CENTER);
+            root.addView(prev, Ui.lp(this, 14));
+        }
+
+        root.addView(new View(this), new LinearLayout.LayoutParams(1, 0, 1f));
 
         LinearLayout acts = new LinearLayout(this);
-        acts.setOrientation(LinearLayout.HORIZONTAL);
         acts.addView(action("✕", "Elutasít", Ui.RED, v -> { Caller.stop(this); finishAndRemoveTask(); }), new LinearLayout.LayoutParams(0, -2, 1f));
         View ans = action("📞", "Felveszem", Ui.GREEN, v -> { Caller.stop(this); showDetails(); });
         acts.addView(ans, new LinearLayout.LayoutParams(0, -2, 1f));
@@ -118,11 +152,27 @@ public class CallActivity extends Activity {
         setContentView(root);
     }
 
+    private View tile(String label, String value) {
+        LinearLayout t = new LinearLayout(this);
+        t.setOrientation(LinearLayout.VERTICAL);
+        t.setGravity(Gravity.CENTER);
+        t.setBackground(Ui.round(0x14FFFFFF, 0x22FFFFFF, 16, this));
+        int q = Ui.dp(this, 12);
+        t.setPadding(q, q, q, q);
+        TextView l = Ui.text(this, label, 12, Ui.MUTED, false);
+        l.setGravity(Gravity.CENTER);
+        t.addView(l);
+        TextView v = Ui.text(this, value.isEmpty() ? "–" : value, 20, Ui.TEXT, true);
+        v.setGravity(Gravity.CENTER);
+        t.addView(v);
+        return t;
+    }
+
     private void pulse(View v, long delay) {
         v.setScaleX(1f);
         v.setScaleY(1f);
         v.setAlpha(0.9f);
-        v.animate().scaleX(1.6f).scaleY(1.6f).alpha(0f).setDuration(2000).setStartDelay(delay)
+        v.animate().scaleX(1.25f).scaleY(1.25f).alpha(0f).setDuration(2000).setStartDelay(delay)
                 .withEndAction(() -> { if (!isFinishing()) pulse(v, 0); }).start();
     }
 
@@ -131,6 +181,7 @@ public class CallActivity extends Activity {
         col.setOrientation(LinearLayout.VERTICAL);
         col.setGravity(Gravity.CENTER_HORIZONTAL);
         TextView c = Ui.circle(this, icon, color, 76, 30);
+        c.setElevation(Ui.dp(this, 6));
         col.addView(c);
         TextView t = Ui.text(this, label, 14, Ui.MUTED, false);
         t.setGravity(Gravity.CENTER);
@@ -143,20 +194,22 @@ public class CallActivity extends Activity {
 
     private void showDetails() {
         ScrollView sv = new ScrollView(this);
-        sv.setBackgroundColor(Ui.BG);
+        sv.setBackground(bg());
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         int p = Ui.dp(this, 20);
-        root.setPadding(p, Ui.dp(this, 40), p, p);
+        root.setPadding(p, Ui.dp(this, 36), p, p);
         sv.addView(root);
 
         LinearLayout head = new LinearLayout(this);
         head.setGravity(Gravity.CENTER_VERTICAL);
-        ImageView coin = new ImageView(this);
-        coin.setImageResource(R.drawable.coin);
-        head.addView(coin, new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
-        TextView h = Ui.text(this, "  Pénzes Zsák", 22, Ui.TEXT, true);
-        head.addView(h);
+        head.addView(Ui.avatar(this, 48));
+        LinearLayout ht = new LinearLayout(this);
+        ht.setOrientation(LinearLayout.VERTICAL);
+        ht.setPadding(Ui.dp(this, 12), 0, 0, 0);
+        ht.addView(Ui.text(this, P.callerName(this), 21, Ui.TEXT, true));
+        ht.addView(Ui.text(this, "DowellFX jelzés", 13, Ui.MUTED, false));
+        head.addView(ht);
         root.addView(head);
 
         LinearLayout card = Ui.card(this);
@@ -192,10 +245,7 @@ public class CallActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (Caller.ringing) { Caller.stop(this); }
+        if (Caller.ringing) Caller.stop(this);
         finishAndRemoveTask();
     }
-
-    @SuppressWarnings("unused")
-    private static int unused() { return Color.BLACK; }
 }

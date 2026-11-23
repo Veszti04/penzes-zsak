@@ -78,7 +78,7 @@ final class Caller {
 
         Notification.Builder b = new Notification.Builder(c, ListenService.CH_CALL)
                 .setSmallIcon(R.drawable.ic_stat)
-                .setContentTitle("Pénzes Zsák hív")
+                .setContentTitle(P.callerName(c) + " hív")
                 .setContentText(firstLines(msg, 4))
                 .setCategory(Notification.CATEGORY_CALL)
                 .setFullScreenIntent(full, true)
@@ -89,9 +89,10 @@ final class Caller {
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setTimeoutAfter(RING_MS + 2000);
         if (Build.VERSION.SDK_INT >= 31) {
+            android.graphics.Bitmap ph = P.callerPhoto(c);
             Person caller = new Person.Builder()
-                    .setName("Pénzes Zsák")
-                    .setIcon(Icon.createWithResource(c, R.drawable.coin))
+                    .setName(P.callerName(c))
+                    .setIcon(ph != null ? Icon.createWithBitmap(Ui.circle(ph)) : Icon.createWithResource(c, R.drawable.logo))
                     .setImportant(true)
                     .build();
             b.setStyle(Notification.CallStyle.forIncomingCall(caller, decline, answer));
@@ -127,7 +128,7 @@ final class Caller {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification n = new Notification.Builder(c, ListenService.CH_MSG)
                 .setSmallIcon(R.drawable.ic_stat)
-                .setContentTitle("Nem fogadott hívás: Pénzes Zsák")
+                .setContentTitle("Nem fogadott hívás: " + P.callerName(c))
                 .setContentText(firstLines(msg, 4))
                 .setStyle(new Notification.BigTextStyle().bigText(msg))
                 .setContentIntent(pi)
@@ -135,6 +136,41 @@ final class Caller {
                 .setColor(0xFFF2C14E)
                 .build();
         try { c.getSystemService(NotificationManager.class).notify(NID_MISSED, n); } catch (Exception ignored) { }
+    }
+
+    /** Csendes értesítés (zárás, összesítő): nem csörög, csak megjelenik. */
+    static void quiet(Context ctx, String msg, String click) {
+        Context c = ctx.getApplicationContext();
+        ListenService.channels(c);
+        PendingIntent pi = PendingIntent.getActivity(c, 14, callIntent(c, msg, click, true),
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        String[] ls = msg.split("\n");
+        String title = ls.length > 0 ? ls[0].trim() : "DowellFX";
+        Notification n = new Notification.Builder(c, ListenService.CH_INFO)
+                .setSmallIcon(R.drawable.ic_stat)
+                .setContentTitle(title.isEmpty() ? "DowellFX" : title)
+                .setContentText(firstLines(msg.substring(Math.min(msg.length(), ls.length > 0 ? ls[0].length() : 0)), 3))
+                .setStyle(new Notification.BigTextStyle().bigText(msg))
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .setColor(0xFFF2C14E)
+                .build();
+        try { c.getSystemService(NotificationManager.class).notify((int) (System.currentTimeMillis() % 100000) + 100, n); } catch (Exception ignored) { }
+    }
+
+    /** Jelzés-adatok kiolvasása a szövegből: [fajta, irány, szimbólum, belépő, SL, most]. */
+    static String[] parse(String msg) {
+        String kind = msg.contains("IDŐSTOP") ? "timestop" : msg.contains("PRÓBA") ? "test" : msg.contains("SZIGNÁL") ? "signal" : "other";
+        String dir = "", sym = "", entry = "", sl = "", now = "";
+        for (String raw : msg.split("\n")) {
+            String l = raw.trim();
+            if (dir.isEmpty() && l.startsWith("📍")) dir = l.contains("SELL") ? "SELL" : l.contains("BUY") ? "BUY" : "";
+            else if (sym.isEmpty() && l.startsWith("🥇")) sym = l.substring(l.indexOf("🥇") + 2).trim();
+            else if (entry.isEmpty() && l.startsWith("Belépő:")) entry = l.substring(7).trim();
+            else if (sl.isEmpty() && (l.startsWith("SL:") || l.startsWith("Eredeti SL:"))) sl = l.substring(l.indexOf(':') + 1).trim();
+            else if (now.isEmpty() && l.startsWith("Most:")) now = l.substring(5).trim();
+        }
+        return new String[]{kind, dir, sym, entry, sl, now};
     }
 
     private static void startSound(Context c) {

@@ -24,9 +24,9 @@ jobs:
       - name: Build APK
         run: ./gradlew assembleRelease --no-daemon --stacktrace
       - name: Rename
-        run: cp app/build/outputs/apk/release/app-release.apk PenzesZsak.apk
+        run: cp app/build/outputs/apk/release/app-release.apk DowellFX.apk
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: PenzesZsak-apk
-          path: PenzesZsak.apk
+          name: DowellFX.apk
+          path: DowellFX.apk

@@ -13,7 +13,7 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
-        android:label="Pénzes Zsák"
+        android:label="DowellFX"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="false"
@@ -53,7 +53,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Valós idejű kereskedési jelzések fogadása és bejövő hívás jelzése" />
+                android:value="DowellFX: valós idejű kereskedési jelzések fogadása és bejövő hívás jelzése" />
         </service>
 
         <receiver android:name=".Rx" android:exported="true">

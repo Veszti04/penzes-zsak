@@ -23,6 +23,7 @@ import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.view.View;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -36,7 +37,8 @@ public class MainActivity extends Activity {
     private final Handler h = new Handler(Looper.getMainLooper());
     private TextView status, permNotif, permFull, permBatt;
     private EditText server, topic;
-    private LinearLayout hist;
+    private LinearLayout hist, avatarBox;
+    private EditText callerName;
     private int histCount = -1;
 
     private final Runnable tick = new Runnable() {
@@ -108,13 +110,13 @@ public class MainActivity extends Activity {
         // fejléc
         LinearLayout head = new LinearLayout(this);
         head.setGravity(Gravity.CENTER_VERTICAL);
-        ImageView coin = new ImageView(this);
-        coin.setImageResource(R.drawable.coin);
-        head.addView(coin, new LinearLayout.LayoutParams(Ui.dp(this, 52), Ui.dp(this, 52)));
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(R.drawable.logo);
+        head.addView(logo, new LinearLayout.LayoutParams(Ui.dp(this, 54), Ui.dp(this, 54)));
         LinearLayout ht = new LinearLayout(this);
         ht.setOrientation(LinearLayout.VERTICAL);
         ht.setPadding(Ui.dp(this, 12), 0, 0, 0);
-        ht.addView(Ui.text(this, "Pénzes Zsák", 22, Ui.TEXT, true));
+        ht.addView(Ui.text(this, "DowellFX", 24, Ui.TEXT, true));
         status = Ui.text(this, "…", 13, Ui.MUTED, false);
         ht.addView(status);
         head.addView(ht, new LinearLayout.LayoutParams(0, -2, 1f));
@@ -125,9 +127,46 @@ public class MainActivity extends Activity {
         test.setOnClickListener(v -> {
             Toast.makeText(this, "Zárd le a telefont – 5 mp múlva csörög", Toast.LENGTH_LONG).show();
             h.postDelayed(() -> Caller.ring(getApplicationContext(),
-                    "🧪 PRÓBAHÍVÁS\nHa ezt látod és csörgött a telefon, minden működik. 💰", ""), 5000);
+                    "📣 ÚJ SZIGNÁL! (PRÓBA)\n🥇 XAUUSD\n📍 BUY\nBelépő: 4 100,00\nSL: 4 088,00\nCél: Követő stop\n\n🧪 Ez csak próbahívás – ha csörgött, minden működik. 💰", ""), 5000);
         });
         root.addView(test, Ui.lp(this, 18));
+
+        // hívó (név + kép)
+        LinearLayout who = Ui.card(this);
+        who.addView(Ui.text(this, "Ki hívjon?", 16, Ui.TEXT, true));
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        avatarBox = new LinearLayout(this);
+        avatarBox.addView(Ui.avatar(this, 72));
+        row.addView(avatarBox);
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setPadding(Ui.dp(this, 14), 0, 0, 0);
+        callerName = field(col, "Hívó neve", P.callerName(this));
+        callerName.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence a, int b, int c, int d) { }
+            @Override public void onTextChanged(CharSequence a, int b, int c, int d) { }
+            @Override public void afterTextChanged(android.text.Editable e) { P.setCallerName(MainActivity.this, e.toString()); }
+        });
+        row.addView(col, new LinearLayout.LayoutParams(0, -2, 1f));
+        who.addView(row, Ui.lp(this, 8));
+        LinearLayout btns = new LinearLayout(this);
+        Button pick = Ui.button(this, "🖼 Kép választása", false);
+        pick.setOnClickListener(v -> {
+            try { startActivityForResult(new Intent(Intent.ACTION_GET_CONTENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE), 7); }
+            catch (Exception e) { Toast.makeText(this, "Nincs képválasztó", Toast.LENGTH_SHORT).show(); }
+        });
+        btns.addView(pick, new LinearLayout.LayoutParams(0, -2, 1f));
+        View gap = new View(this);
+        btns.addView(gap, new LinearLayout.LayoutParams(Ui.dp(this, 10), 1));
+        Button reset = Ui.button(this, "DowellFX logó", false);
+        reset.setOnClickListener(v -> {
+            P.callerPhotoFile(this).delete();
+            refreshAvatar();
+        });
+        btns.addView(reset, new LinearLayout.LayoutParams(0, -2, 1f));
+        who.addView(btns, Ui.lp(this, 12));
+        root.addView(who, Ui.lp(this, 14));
 
         // engedélyek
         LinearLayout perms = Ui.card(this);
@@ -151,14 +190,14 @@ public class MainActivity extends Activity {
         });
         Switch alarm = sw(perms, "Néma / rezgő módban is csörögjön (ébresztő hangerővel)", P.alarm(this),
                 (bt, on) -> P.sp(this).edit().putBoolean("alarm", on).apply());
-        Switch tone = sw(perms, "A telefon saját csengőhangja (különben a Pénzes Zsák csengés)", P.systemTone(this),
+        Switch tone = sw(perms, "A telefon saját csengőhangja (különben a DowellFX csengés)", P.systemTone(this),
                 (bt, on) -> P.sp(this).edit().putBoolean("systemTone", on).apply());
         root.addView(perms, Ui.lp(this, 14));
 
         // kapcsolat
         LinearLayout conn = Ui.card(this);
         conn.addView(Ui.text(this, "Kapcsolat", 16, Ui.TEXT, true));
-        TextView hint = Ui.text(this, "A legegyszerűbb: a weboldalon az app „Csörgés lezárt képernyőn” részénél nyomd meg az „📲 APK beállítása” gombot. Vagy írd be kézzel:", 13, Ui.MUTED, false);
+        TextView hint = Ui.text(this, "A legegyszerűbb: a weboldali appban a „Csörgés lezárt képernyőn” résznél nyomd meg az „📲 APK beállítása” gombot. Vagy írd be kézzel:", 13, Ui.MUTED, false);
         conn.addView(hint, Ui.lp(this, 6));
         server = field(conn, "Szerver", P.server(this));
         topic = field(conn, "Téma (penzeszsak-…)", P.topic(this));
@@ -260,6 +299,44 @@ public class MainActivity extends Activity {
             t.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 8));
             t.setOnClickListener(v -> startActivity(Caller.callIntent(this, m, "", true)));
             hist.addView(t, Ui.lp(this, 2));
+        }
+    }
+
+    private void refreshAvatar() {
+        avatarBox.removeAllViews();
+        avatarBox.addView(Ui.avatar(this, 72));
+    }
+
+    /** A választott képet négyzetre vágva (max 512 px) elmentjük az app saját tárhelyére. */
+    @Override
+    protected void onActivityResult(int req, int res, Intent data) {
+        super.onActivityResult(req, res, data);
+        if (req != 7 || res != RESULT_OK || data == null || data.getData() == null) return;
+        try {
+            android.graphics.Bitmap bm;
+            Uri u = data.getData();
+            if (Build.VERSION.SDK_INT >= 28) {
+                bm = android.graphics.ImageDecoder.decodeBitmap(android.graphics.ImageDecoder.createSource(getContentResolver(), u), (dec, info, src) -> {
+                    int big = Math.max(info.getSize().getWidth(), info.getSize().getHeight());
+                    dec.setTargetSampleSize(Math.max(1, big / 1024));
+                    dec.setAllocator(android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE);
+                });
+            } else {
+                android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+                o.inSampleSize = 2;
+                try (java.io.InputStream in = getContentResolver().openInputStream(u)) { bm = android.graphics.BitmapFactory.decodeStream(in, null, o); }
+            }
+            if (bm == null) throw new Exception("nem olvasható");
+            int n = Math.min(bm.getWidth(), bm.getHeight());
+            android.graphics.Bitmap sq = android.graphics.Bitmap.createBitmap(bm, (bm.getWidth() - n) / 2, (bm.getHeight() - n) / 2, n, n);
+            if (n > 512) sq = android.graphics.Bitmap.createScaledBitmap(sq, 512, 512, true);
+            try (java.io.FileOutputStream out = new java.io.FileOutputStream(P.callerPhotoFile(this))) {
+                sq.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out);
+            }
+            refreshAvatar();
+            Toast.makeText(this, "✅ Kép beállítva", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Nem sikerült betölteni a képet: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
