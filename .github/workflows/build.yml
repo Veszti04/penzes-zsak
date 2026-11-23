@@ -21,10 +21,8 @@ jobs:
           java-version: "17"
       - name: Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.9"
       - name: Build APK
-        run: gradle assembleRelease --no-daemon --stacktrace
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
       - name: Rename
         run: cp app/build/outputs/apk/release/app-release.apk PenzesZsak.apk
       - name: Upload
