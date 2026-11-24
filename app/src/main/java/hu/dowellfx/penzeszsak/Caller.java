@@ -14,6 +14,8 @@ import android.media.RingtoneManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 
@@ -71,6 +73,13 @@ final class Caller {
             H.postDelayed(TIMEOUT, RING_MS);
         });
 
+        // Kijelző bekapcsolása + a hívásképernyő közvetlen megnyitása a lezárt képernyő fölött
+        // (ehhez a „Megjelenítés más alkalmazások felett” engedély kell; enélkül a teljes képernyős értesítés intézi)
+        wakeScreen(c);
+        if (Settings.canDrawOverlays(c)) {
+            try { c.startActivity(callIntent(c, msg, click, false)); } catch (Exception ignored) { }
+        }
+
         int fl = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
         PendingIntent full = PendingIntent.getActivity(c, 10, callIntent(c, msg, click, false), fl);
         PendingIntent answer = PendingIntent.getActivity(c, 11, callIntent(c, msg, click, true), fl);
@@ -109,6 +118,17 @@ final class Caller {
                 c.getSystemService(NotificationManager.class).notify(NID_CALL, b.build());
             } catch (Exception ignored) { }
         }
+    }
+
+    @SuppressWarnings("deprecation")
+    private static void wakeScreen(Context c) {
+        try {
+            PowerManager pm = c.getSystemService(PowerManager.class);
+            if (pm != null && !pm.isInteractive()) {
+                PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "dfx:wake");
+                wl.acquire(8000);
+            }
+        } catch (Exception ignored) { }
     }
 
     static void stop(Context c) {

@@ -35,7 +35,7 @@ import java.util.Locale;
 /** Beállító képernyő: kapcsolat, engedélyek, próbahívás, legutóbbi jelzések. */
 public class MainActivity extends Activity {
     private final Handler h = new Handler(Looper.getMainLooper());
-    private TextView status, permNotif, permFull, permBatt;
+    private TextView status, permNotif, permFull, permBatt, permOverlay;
     private EditText server, topic;
     private LinearLayout hist, avatarBox;
     private EditText callerName;
@@ -181,6 +181,22 @@ public class MainActivity extends Activity {
                 catch (Exception e) { openAppNotif(); }
             } else openAppNotif();
         });
+        permOverlay = permRow(perms, "Hívás a lezárt képernyő fölött (megjelenítés más appok felett)", v -> {
+            try { startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()))); }
+            catch (Exception e) { openAppDetails(); }
+        });
+        if (Build.MANUFACTURER.toLowerCase(Locale.ROOT).contains("xiaomi") || Build.BRAND.toLowerCase(Locale.ROOT).matches(".*(redmi|poco|xiaomi).*")) {
+            TextView mi = Ui.text(this, "ℹ️  Xiaomi/Redmi: Egyéb engedélyek → „Megjelenítés a lezárt képernyőn” és „Felugró ablakok a háttérben” – koppints ide", 14, Ui.GOLD, false);
+            mi.setPadding(0, Ui.dp(this, 10), 0, Ui.dp(this, 10));
+            mi.setOnClickListener(v -> {
+                try {
+                    startActivity(new Intent("miui.intent.action.APP_PERM_EDITOR")
+                            .setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity")
+                            .putExtra("extra_pkgname", getPackageName()));
+                } catch (Exception e) { openAppDetails(); }
+            });
+            perms.addView(mi, Ui.lp(this, 4));
+        }
         permBatt = permRow(perms, "Akkumulátor: korlátlan futás", v -> {
             try {
                 startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName())));
@@ -262,6 +278,10 @@ public class MainActivity extends Activity {
         return e;
     }
 
+    private void openAppDetails() {
+        try { startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()))); } catch (Exception ignored) { }
+    }
+
     private void openAppNotif() {
         startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()));
     }
@@ -277,6 +297,7 @@ public class MainActivity extends Activity {
         mark(permFull, Build.VERSION.SDK_INT < 34 || nm.canUseFullScreenIntent());
         PowerManager pm = getSystemService(PowerManager.class);
         mark(permBatt, pm.isIgnoringBatteryOptimizations(getPackageName()));
+        mark(permOverlay, Settings.canDrawOverlays(this));
     }
 
     private void refreshStatus() {
