@@ -68,7 +68,7 @@ final class Api {
     /** Üzenetek letöltése a legutóbbi óta. Vissza: új üzenetek száma, vagy -1 ha a fiók megszűnt. */
     static int syncFeed(Context c) {
         JSONObject j = call(c, "feed", "since=" + P.feedLast(c), null);
-        if (denied(j)) { Account.expired(c); return -1; }
+        if (denied(j)) { Account.expired(c, j.optString("error", null)); return -1; }
         if (!j.optBoolean("ok")) return 0;
         P.saveAccount(c, j, false);
         JSONArray items = j.optJSONArray("items");

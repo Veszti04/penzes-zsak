@@ -123,7 +123,7 @@ public class SettingsActivity extends Activity {
                 JSONObject r = Api.call(getApplicationContext(), "test", null, new JSONObject());
                 runOnUiThread(() -> {
                     stest.setEnabled(true);
-                    if (Api.denied(r)) { Account.expired(this); startActivity(new Intent(this, LoginActivity.class)); finish(); return; }
+                    if (Api.denied(r)) { Account.expired(this, r.optString("error", null)); startActivity(new Intent(this, LoginActivity.class)); finish(); return; }
                     Toast.makeText(this, r.optBoolean("ok") ? "Elküldve – zárd le a telefont, mindjárt csörög" : r.optString("error", "Hiba"), Toast.LENGTH_LONG).show();
                 });
             }).start();

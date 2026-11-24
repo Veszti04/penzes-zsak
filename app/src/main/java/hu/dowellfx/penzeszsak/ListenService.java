@@ -208,6 +208,10 @@ public class ListenService extends Service {
             String msg = j.optString("message", "");
             int id = 0;
             String click = j.optString("click", "");
+            if (click.startsWith("dowellfx://kick")) {        // máshol beléptek ezzel a fiókkal: azonnali ellenőrzés
+                if (Api.syncFeed(this) < 0) finish();
+                return;
+            }
             int k = click.lastIndexOf('/');
             if (click.startsWith("dowellfx://m/") && k > 0) try { id = Integer.parseInt(click.substring(k + 1)); } catch (Exception ignored) { }
             PowerManager pm = getSystemService(PowerManager.class);

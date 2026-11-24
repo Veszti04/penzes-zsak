@@ -13,18 +13,23 @@ final class Account {
     static final String MSG_EXPIRED = "Hibás adatok vagy már lejárt a meghívód!";
 
     /** A fiók megszűnt: azonnal leállunk, hogy ne jöjjön több értesítés. */
-    static void expired(Context ctx) {
+    static void expired(Context ctx) { expired(ctx, null); }
+
+    /** serverMsg: a szerver magyarázata (pl. ha egy másik telefonon léptek be ezzel a fiókkal). */
+    static void expired(Context ctx, String serverMsg) {
         Context c = ctx.getApplicationContext();
         if (!P.loggedIn(c)) return;
+        boolean kicked = serverMsg != null && serverMsg.contains("másik telefon");
         stopAll(c);
-        P.sp(c).edit().putString("loginMsg", "A hozzáférésed lejárt vagy megszűnt, ezért kijelentkeztettünk. Új meghívókóddal regisztrálhatsz újra.").apply();
+        P.sp(c).edit().putString("loginMsg", kicked ? serverMsg
+                : "A hozzáférésed lejárt vagy megszűnt, ezért kijelentkeztettünk. Új meghívókóddal regisztrálhatsz újra.").apply();
         try {
             PendingIntent pi = PendingIntent.getActivity(c, 30, new Intent(c, LoginActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                     PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
             Notification n = new Notification.Builder(c, ListenService.CH_MSG)
                     .setSmallIcon(R.drawable.ic_stat)
-                    .setContentTitle("DowellFX: lejárt a hozzáférésed")
-                    .setContentText("Kijelentkeztettünk, nem kapsz több jelzést.")
+                    .setContentTitle(kicked ? "DowellFX: másik telefonon beléptek" : "DowellFX: lejárt a hozzáférésed")
+                    .setContentText(kicked ? "Ezen a telefonon kijelentkeztettünk." : "Kijelentkeztettünk, nem kapsz több jelzést.")
                     .setContentIntent(pi).setAutoCancel(true).setColor(0xFFF2C14E).build();
             ListenService.channels(c);
             c.getSystemService(NotificationManager.class).notify(40, n);
