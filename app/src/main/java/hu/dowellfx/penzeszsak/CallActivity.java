@@ -21,7 +21,8 @@ import android.widget.TextView;
 
 /** Teljes képernyős bejövő hívás (DowellFX): hívó képe + neve, a jelzés lényege, Felveszem / Elutasít. Lezárt képernyő fölött is. */
 public class CallActivity extends Activity {
-    private String msg = "", click = "";
+    private String msg = "";
+    private int id = 0;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -47,15 +48,16 @@ public class CallActivity extends Activity {
 
     private void load(Intent i) {
         msg = i.getStringExtra("msg") == null ? "" : i.getStringExtra("msg");
-        click = i.getStringExtra("click") == null ? "" : i.getStringExtra("click");
-        if (i.getBooleanExtra("answered", false)) {
-            answer();
-        } else if (!Caller.ringing) {
-            Caller.stop(this);
-            showDetails();
-        } else {
-            showRinging();
-        }
+        id = i.getIntExtra("id", 0);
+        if (i.getBooleanExtra("answered", false) || !Caller.ringing) answer();
+        else showRinging();
+    }
+
+    /** Felveszem: csend, és az app üzenetlistája nyílik meg, ennél a jelzésnél. */
+    private void answer() {
+        Caller.stop(this);
+        startActivity(Caller.chatIntent(this, id, true));
+        finishAndRemoveTask();
     }
 
     private GradientDrawable bg() {
@@ -192,72 +194,6 @@ public class CallActivity extends Activity {
         col.setOnClickListener(l);
         c.setContentDescription(label);
         return col;
-    }
-
-    private void showDetails() {
-        ScrollView sv = new ScrollView(this);
-        sv.setBackground(bg());
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        int p = Ui.dp(this, 20);
-        root.setPadding(p, Ui.dp(this, 36), p, p);
-        sv.addView(root);
-
-        LinearLayout head = new LinearLayout(this);
-        head.setGravity(Gravity.CENTER_VERTICAL);
-        head.addView(Ui.avatar(this, 48));
-        LinearLayout ht = new LinearLayout(this);
-        ht.setOrientation(LinearLayout.VERTICAL);
-        ht.setPadding(Ui.dp(this, 12), 0, 0, 0);
-        ht.addView(Ui.text(this, P.callerName(this), 21, Ui.TEXT, true));
-        ht.addView(Ui.text(this, "DowellFX jelzés", 13, Ui.MUTED, false));
-        head.addView(ht);
-        root.addView(head);
-
-        LinearLayout card = Ui.card(this);
-        TextView body = Ui.text(this, msg.isEmpty() ? "(üres üzenet)" : msg, 17, Ui.TEXT, false);
-        body.setTextIsSelectable(true);
-        card.addView(body);
-        root.addView(card, Ui.lp(this, 18));
-
-        if (!click.isEmpty()) {
-            Button web = Ui.button(this, "Megnyitás a weboldalon", false);
-            web.setOnClickListener(v -> openWeb());
-            root.addView(web, Ui.lp(this, 14));
-        }
-        Button close = Ui.button(this, "Bezár", true);
-        close.setOnClickListener(v -> finishAndRemoveTask());
-        root.addView(close, Ui.lp(this, 10));
-        setContentView(sv);
-    }
-
-    /** Felveszem: csend, majd egyenesen a weboldal – az adott jelzésnél. Lezárt telefonnál előbb feloldást kér. */
-    private void answer() {
-        Caller.stop(this);
-        if (click.isEmpty()) { showDetails(); return; }    // próbahívásnál nincs weboldal-cím
-        showDetails();                                      // háttérben ez marad, ha a feloldást megszakítod
-        openWeb(true);
-    }
-
-    private void openWeb() { openWeb(false); }
-
-    private void openWeb(boolean closeAfter) {
-        Runnable go = () -> {
-            try {
-                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(click)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                if (closeAfter) finishAndRemoveTask();
-            } catch (Exception e) {
-                android.widget.Toast.makeText(this, "Nem nyílt meg a weboldal", android.widget.Toast.LENGTH_SHORT).show();
-            }
-        };
-        KeyguardManager km = getSystemService(KeyguardManager.class);
-        if (km != null && km.isKeyguardLocked()) {
-            km.requestDismissKeyguard(this, new KeyguardManager.KeyguardDismissCallback() {
-                @Override public void onDismissSucceeded() { go.run(); }
-            });
-        } else {
-            go.run();
-        }
     }
 
     @Override

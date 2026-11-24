@@ -16,7 +16,7 @@ public class Rx extends BroadcastReceiver {
             return;
         }
         if (Intent.ACTION_BOOT_COMPLETED.equals(a) || Intent.ACTION_MY_PACKAGE_REPLACED.equals(a)) {
-            if (!P.topic(c).isEmpty()) ListenService.start(c);
+            if (P.loggedIn(c)) ListenService.start(c);
         }
     }
 }

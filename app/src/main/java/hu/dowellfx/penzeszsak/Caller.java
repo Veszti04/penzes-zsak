@@ -29,14 +29,15 @@ final class Caller {
     private static final Handler H = new Handler(Looper.getMainLooper());
     private static MediaPlayer mp;
     private static Vibrator vib;
-    private static String lastMsg = "", lastClick = "";
+    private static String lastMsg = "";
+    private static int lastIdx = 0;
     private static Context app;
     static volatile boolean ringing = false;
 
     private static final Runnable TIMEOUT = () -> {
         Context c = app;
         stop(c);
-        if (c != null) missed(c, lastMsg, lastClick);
+        if (c != null) missed(c, lastMsg, lastIdx);
     };
 
     static String firstLines(String msg, int n) {
@@ -53,17 +54,23 @@ final class Caller {
         return b.toString();
     }
 
-    static Intent callIntent(Context c, String msg, String click, boolean answered) {
+    /** Az app üzenetlistája, az adott üzenetre görgetve. */
+    static Intent chatIntent(Context c, int id, boolean fromCall) {
+        return new Intent(c, MainActivity.class).putExtra("focus", id).putExtra("fromCall", fromCall)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+    }
+
+    static Intent callIntent(Context c, String msg, int id, boolean answered) {
         return new Intent(c, CallActivity.class)
-                .putExtra("msg", msg).putExtra("click", click).putExtra("answered", answered)
+                .putExtra("msg", msg).putExtra("id", id).putExtra("answered", answered)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_USER_ACTION);
     }
 
-    static void ring(Context ctx, String msg, String click) {
+    static void ring(Context ctx, String msg, int id) {
         final Context c = ctx.getApplicationContext();
         app = c;
         lastMsg = msg;
-        lastClick = click;
+        lastIdx = id;
         ListenService.channels(c);
         H.post(() -> {
             H.removeCallbacks(TIMEOUT);
@@ -77,12 +84,12 @@ final class Caller {
         // (ehhez a „Megjelenítés más alkalmazások felett” engedély kell; enélkül a teljes képernyős értesítés intézi)
         wakeScreen(c);
         if (Settings.canDrawOverlays(c)) {
-            try { c.startActivity(callIntent(c, msg, click, false)); } catch (Exception ignored) { }
+            try { c.startActivity(callIntent(c, msg, id, false)); } catch (Exception ignored) { }
         }
 
         int fl = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
-        PendingIntent full = PendingIntent.getActivity(c, 10, callIntent(c, msg, click, false), fl);
-        PendingIntent answer = PendingIntent.getActivity(c, 11, callIntent(c, msg, click, true), fl);
+        PendingIntent full = PendingIntent.getActivity(c, 10, callIntent(c, msg, id, false), fl);
+        PendingIntent answer = PendingIntent.getActivity(c, 11, callIntent(c, msg, id, true), fl);
         PendingIntent decline = PendingIntent.getBroadcast(c, 12, new Intent(c, Rx.class).setAction(Rx.DECLINE), fl);
 
         Notification.Builder b = new Notification.Builder(c, ListenService.CH_CALL)
@@ -142,9 +149,9 @@ final class Caller {
         }
     }
 
-    static void missed(Context ctx, String msg, String click) {
+    static void missed(Context ctx, String msg, int id) {
         Context c = ctx.getApplicationContext();
-        PendingIntent pi = PendingIntent.getActivity(c, 13, callIntent(c, msg, click, true),
+        PendingIntent pi = PendingIntent.getActivity(c, 13, chatIntent(c, id, false),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification n = new Notification.Builder(c, ListenService.CH_MSG)
                 .setSmallIcon(R.drawable.ic_stat)
@@ -159,10 +166,10 @@ final class Caller {
     }
 
     /** Csendes értesítés (zárás, összesítő): nem csörög, csak megjelenik. */
-    static void quiet(Context ctx, String msg, String click) {
+    static void quiet(Context ctx, String msg, int id) {
         Context c = ctx.getApplicationContext();
         ListenService.channels(c);
-        PendingIntent pi = PendingIntent.getActivity(c, 14, callIntent(c, msg, click, true),
+        PendingIntent pi = PendingIntent.getActivity(c, 14 + (id % 1000), chatIntent(c, id, false),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         String[] ls = msg.split("\n");
         String title = ls.length > 0 ? ls[0].trim() : "DowellFX";
