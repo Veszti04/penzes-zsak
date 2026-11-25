@@ -118,6 +118,7 @@ public class CallActivity extends Activity {
         chips.setGravity(Gravity.CENTER);
         String dir = s[1];
         if ("timestop".equals(s[0])) chips.addView(Ui.pill(this, "⏱ IDŐSTOP – ZÁRD!", Ui.ORANGE));
+        else if ("stop".equals(s[0])) chips.addView(Ui.pill(this, "🛡 STOP HÚZÁS", 0xFF5AA9FF));
         else if (!dir.isEmpty()) chips.addView(Ui.pill(this, dir.equals("BUY") ? "▲ BUY" : "▼ SELL", dir.equals("BUY") ? Ui.GREEN : Ui.RED));
         else if ("test".equals(s[0])) chips.addView(Ui.pill(this, "PRÓBAHÍVÁS", Ui.GOLD));
         if (!s[2].isEmpty()) {
@@ -133,7 +134,8 @@ public class CallActivity extends Activity {
             tiles.addView(tile("Belépő", s[3]), new LinearLayout.LayoutParams(0, -2, 1f));
             View gap = new View(this);
             tiles.addView(gap, new LinearLayout.LayoutParams(Ui.dp(this, 10), 1));
-            tiles.addView(tile("timestop".equals(s[0]) ? "Most" : "Stop loss", "timestop".equals(s[0]) ? s[5] : s[4]), new LinearLayout.LayoutParams(0, -2, 1f));
+            boolean alt = "timestop".equals(s[0]) || "stop".equals(s[0]);
+            tiles.addView(tile("timestop".equals(s[0]) ? "Most" : "stop".equals(s[0]) ? "Új stop" : "Stop loss", alt ? s[5] : s[4]), new LinearLayout.LayoutParams(0, -2, 1f));
             root.addView(tiles, Ui.lp(this, 14));
         } else {
             TextView prev = Ui.text(this, Caller.firstLines(msg, 5), 14, 0xFFCFDCD2, false);

@@ -185,9 +185,9 @@ final class Caller {
         try { c.getSystemService(NotificationManager.class).notify((int) (System.currentTimeMillis() % 100000) + 100, n); } catch (Exception ignored) { }
     }
 
-    /** Jelzés-adatok kiolvasása a szövegből: [fajta, irány, szimbólum, belépő, SL, most]. */
+    /** Jelzés-adatok kiolvasása a szövegből: [fajta, irány, szimbólum, belépő, SL, most / új stop]. */
     static String[] parse(String msg) {
-        String kind = msg.contains("IDŐSTOP") ? "timestop" : msg.contains("PRÓBA") ? "test" : msg.contains("SZIGNÁL") ? "signal" : "other";
+        String kind = msg.contains("IDŐSTOP") ? "timestop" : msg.contains("KÖVETŐ STOP") ? "stop" : msg.contains("PRÓBA") ? "test" : (msg.contains("SZIGNÁL") || msg.contains("BELÉPÉSI")) ? "signal" : "other";
         String dir = "", sym = "", entry = "", sl = "", now = "";
         for (String raw : msg.split("\n")) {
             String l = raw.trim();
@@ -196,6 +196,7 @@ final class Caller {
             else if (entry.isEmpty() && l.startsWith("Belépő:")) entry = l.substring(7).trim();
             else if (sl.isEmpty() && (l.startsWith("SL:") || l.startsWith("Eredeti SL:"))) sl = l.substring(l.indexOf(':') + 1).trim();
             else if (now.isEmpty() && l.startsWith("Most:")) now = l.substring(5).trim();
+            else if (now.isEmpty() && l.contains("Új stop:")) now = l.substring(l.indexOf("Új stop:") + 8).trim();
         }
         return new String[]{kind, dir, sym, entry, sl, now};
     }
