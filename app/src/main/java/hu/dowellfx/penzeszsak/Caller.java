@@ -165,7 +165,7 @@ final class Caller {
         try { c.getSystemService(NotificationManager.class).notify(NID_MISSED, n); } catch (Exception ignored) { }
     }
 
-    /** Csendes értesítés (zárás, összesítő): nem csörög, csak megjelenik. */
+    /** Sima értesítés (zárás, összesítő): felugrik és egyet csippan, de nem csörög és nincs hívásképernyő. */
     static void quiet(Context ctx, String msg, int id) {
         Context c = ctx.getApplicationContext();
         ListenService.channels(c);
@@ -175,6 +175,8 @@ final class Caller {
         String title = ls.length > 0 ? ls[0].trim() : "DowellFX";
         Notification n = new Notification.Builder(c, ListenService.CH_INFO)
                 .setSmallIcon(R.drawable.ic_stat)
+                .setCategory(Notification.CATEGORY_MESSAGE)
+                .setOnlyAlertOnce(false)
                 .setContentTitle(title.isEmpty() ? "DowellFX" : title)
                 .setContentText(firstLines(msg.substring(Math.min(msg.length(), ls.length > 0 ? ls[0].length() : 0)), 3))
                 .setStyle(new Notification.BigTextStyle().bigText(msg))

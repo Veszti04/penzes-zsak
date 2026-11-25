@@ -31,7 +31,7 @@ public class ListenService extends Service {
     static final String CH_SVC = "pz_service";
     static final String CH_CALL = "pz_call";
     static final String CH_MSG = "pz_msg";
-    static final String CH_INFO = "pz_info";
+    static final String CH_INFO = "pz_info2";   // felugró, egyet csippanó értesítés (nem hívás)
     static final int NID_SVC = 1;
     private static final long CHECK_MS = 30 * 60 * 1000L;
 
@@ -82,8 +82,11 @@ public class ListenService extends Service {
         msg.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         nm.createNotificationChannel(msg);
 
-        NotificationChannel info = new NotificationChannel(CH_INFO, "Zárások és összesítők (csendes)", NotificationManager.IMPORTANCE_LOW);
-        info.setDescription("Nyertes/vesztes zárás, stop-módosítás, összesítők – hang nélkül");
+        try { nm.deleteNotificationChannel("pz_info"); } catch (Exception ignored) { }   // a régi, néma csatorna
+        NotificationChannel info = new NotificationChannel(CH_INFO, "Zárások és összesítők", NotificationManager.IMPORTANCE_HIGH);
+        info.setDescription("Nyertes/vesztes zárás, összesítők – felugrik és egyet csippan, de nem csörög");
+        info.enableVibration(true);
+        info.setVibrationPattern(new long[]{0, 250});
         info.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         nm.createNotificationChannel(info);
     }
